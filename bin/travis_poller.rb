@@ -43,7 +43,14 @@ def check_projects(projects)
     mongo_project = @collection.find({name: project}).first
     mongo_project ? local_highest_build = mongo_project[:latest_build] : local_highest_build = 0
 
+    begin
     remote_project = Travis::Repository.find(project)
+    rescue NoMethodError => e
+      # TODO (MMB) log something clever
+      # high-speed exit point
+      next;
+    end
+
     if remote_project.nil?
       # TODO (MMB) log something clever
       # high-speed exit point
