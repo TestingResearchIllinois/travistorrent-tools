@@ -6,13 +6,15 @@ require 'fileutils'
 require 'mongo'
 require 'travis'
 
+# Reads in a list of projects and parses them for validity. Only returns projects with the format
+# [alphanumeric]/[alphanumeric] and converts the GitHub format [alphanumeric]@[alphanumeric] to it if necessary
 def read_projects
   projects_file = File.new('projects.txt', 'r')
   projects = projects_file.readlines.uniq.compact.map do |elem|
-    elem.strip
+    elem.strip.gsub('@','/')
   end
   projects.select! do |elem|
-    elem != ''
+    elem != '' and !/^[\w-]+\/[\w-]+$/.match(elem).nil?
   end
 
   exit(0) if projects.empty?
@@ -41,10 +43,10 @@ def check_projects(projects)
   # builds, downloaded builds, failed downloads etc.
   projects.each do |project|
     mongo_project = @collection.find({name: project}).first
-    mongo_project ? local_highest_build = mongo_project[:latest_build] : local_highest_build = 0
+    mongo_project ? local_highest_build = mongo_project[:latest_build] : local_highest_build = 1
 
     begin
-    remote_project = Travis::Repository.find(project)
+      remote_project = Travis::Repository.find(project)
     rescue NoMethodError => e
       # TODO (MMB) log something clever
       # high-speed exit point
@@ -70,7 +72,8 @@ end
 def enqueue_build_downloads(from, to, project)
   new_builds = (from..to).to_a
   new_builds.each do |build|
-    msg = "#{project} #{build}"
+    my_hash = {:project => project, :build => build}
+    msg = JSON.generate(my_hash)
     @queue.publish(msg, :persistent => true)
     puts " [x] Sent #{msg}"
   end
