@@ -50,13 +50,13 @@ def check_projects(projects)
     rescue NoMethodError => e
       # TODO (MMB) log something clever
       # high-speed exit point
-      next;
+      next
     end
 
     if remote_project.nil?
       # TODO (MMB) log something clever
       # high-speed exit point
-      next;
+      next
     end
 
     remote_highest_build = remote_project.last_build_number.to_i
