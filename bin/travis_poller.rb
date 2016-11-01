@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
 
-require 'bunny'
 require 'fileutils'
 require 'travis'
 
-load '../lib/mongo_access.rb'
+load '../lib/mongodb_access.rb'
+load '../lib/rabbitmq_access.rb'
+
 
 # Reads in a list of projects and parses them for validity. Only returns projects with the format
 # [alphanumeric]/[alphanumeric] and converts the GitHub format [alphanumeric]@[alphanumeric] to it if necessary
@@ -20,14 +21,6 @@ def read_projects
 
   exit(0) if projects.empty?
   projects
-end
-
-def setup_rabbit
-  rabbit_con = Bunny.new
-  rabbit_con.start
-  channel = rabbit_con.create_channel
-  @queue = channel.queue("download_build_queue", :durable => true)
-  rabbit_con
 end
 
 def check_projects(projects)
@@ -70,7 +63,7 @@ def enqueue_build_downloads(from, to, project)
   new_builds.each do |build|
     my_hash = {:project => project, :build => build}
     msg = JSON.generate(my_hash)
-    @queue.publish(msg, :persistent => true)
+    download_queue.publish(msg, :persistent => true)
     puts " [x] Sent #{msg}"
   end
 
@@ -81,9 +74,7 @@ def enqueue_build_downloads(from, to, project)
 end
 
 projects = read_projects
-
-rabbit_con = setup_rabbit
-
 check_projects(projects)
 
-rabbit_con.close
+close_mongo
+close_rabbit

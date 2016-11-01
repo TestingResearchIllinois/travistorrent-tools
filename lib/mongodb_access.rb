@@ -7,7 +7,7 @@ end
 
 def setup_events_collection
   @mongo_events = @mongo_client[:projects]
-  
+
   # Creating indices in MongoDB is idempotent. So it only creates the index only if it doesn't already exist.
   @mongo_events.indexes.create_one({name: 1}, unique: true)
 end
@@ -18,3 +18,6 @@ def mongo_events
   @mongo_events
 end
 
+def close_mongo
+  @mongo_client.close
+end
