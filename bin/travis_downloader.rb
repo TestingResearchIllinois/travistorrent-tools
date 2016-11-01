@@ -14,10 +14,8 @@ def buildlog_dir(repo)
   FileUtils::mkdir_p(parent_dir)
 end
 
-def download_and_store_job(job)
-  build = job.build
-
-  logfile = File.join(buildlog_dir(build.repository.slug), "#{build.id}_#{build.commit.sha}_#{job.id.to_s}.log")
+def download_and_store_job(job, build_id, build_commit_sha, project_name)
+  logfile = File.join(buildlog_dir(project_name), "#{build_id}_#{build_commit_sha}_#{job.id.to_s}.log")
   # do not re-download already downloaded buildlogs
   return if File.exists?(logfile)
 
@@ -28,7 +26,7 @@ def download_and_store_job(job)
     log = Net::HTTP.get_response(URI.parse(log_url)).body
   end
 
-  # TODO (MMB) check if logifle is non-empty
+  # TODO (MMB) check if logfile is non-empty; only accept if non-empty
   File.open(logfile, 'w') { |f| f.puts log }
   log = '' # necessary to enable GC of previously stored value, otherwise: memory leak
 end
@@ -40,9 +38,9 @@ puts " [*] Waiting for messages. To exit press CTRL+C"
 begin
   download_queue.subscribe(:manual_ack => true, :block => true) do |delivery_info, properties, body|
     puts " [x] Received '#{body}'"
-    my_message = JSON.parse(body)
-    project_name = my_message['project']
-    build_number = my_message['build']
+    my_message = JSON.parse(body, :symbolize_names => true)
+    project_name = my_message[:project]
+    build_number = my_message[:build]
 
     # TODO (MMB) This is a clone with travis_poller. Write some nicer library function to handle this
     begin
@@ -59,12 +57,15 @@ begin
       next
     end
 
+    # Prefetch build attributes to reduce number of calls to Travis API
     build = project.build(build_number)
+    build_id = build.id
+    build_commit_sha = build.commit.sha
 
     # TODO (MMB) retrieve some basic API statistics from build
     build.jobs.each do |job|
       puts " [#{project_name}] Downloading #{build_number}/#{job.number}"
-      download_and_store_job job
+      download_and_store_job(job, build_id, build_commit_sha, project_name)
       # TODO (MMB) dispatch analysis of buildlogs
     end
 

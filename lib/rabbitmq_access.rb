@@ -19,5 +19,5 @@ def download_queue
 end
 
 def close_rabbit
-  @rabbit_con.close
+  rabbit_con.close
 end
