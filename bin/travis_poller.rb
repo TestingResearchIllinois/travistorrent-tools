@@ -3,8 +3,9 @@
 
 require 'bunny'
 require 'fileutils'
-require 'mongo'
 require 'travis'
+
+load '../lib/mongo_access.rb'
 
 # Reads in a list of projects and parses them for validity. Only returns projects with the format
 # [alphanumeric]/[alphanumeric] and converts the GitHub format [alphanumeric]@[alphanumeric] to it if necessary
@@ -29,24 +30,13 @@ def setup_rabbit
   rabbit_con
 end
 
-def setup_mongo
-  # TODO (MMB) Factor out connection creation
-  mongo_client = Mongo::Client.new(['127.0.0.1:27017'], :database => 'm_travistorrent')
-  db = mongo_client.database
-  Mongo::Logger.logger.level = ::Logger::FATAL
-
-  @collection = mongo_client[:projects]
-  # TODO (MMB) Check if already indexed before accessing
-  @collection.indexes.create_one({name: 1}, unique: true)
-end
-
 def check_projects(projects)
   # TODO (MMB) This is an over simplification of the project meta model. We probably want to store failed
   # builds, downloaded builds, failed downloads etc.
   projects.each do |project|
-    # TODO (MMB) add getter for @collection and handle failures in there
+    # TODO (MMB) add getter for mongo_events and handle failures in there
     # TODO (MMB) query by id, and pull through the rest of the script
-    mongo_project = @collection.find({name: project}).first
+    mongo_project = mongo_events.find({name: project}).first
     mongo_project ? local_highest_build = mongo_project[:latest_build] : local_highest_build = 1
 
     begin
@@ -85,7 +75,7 @@ def enqueue_build_downloads(from, to, project)
   end
 
   # TODO (MMB) Convert to event stream and push into travis_downloader
-  @collection.update_one({"name": project},
+  mongo_events.update_one({"name": project},
                          {"name": project, "latest_build" => to},
                          {"upsert": true})
 end
@@ -93,7 +83,6 @@ end
 projects = read_projects
 
 rabbit_con = setup_rabbit
-setup_mongo
 
 check_projects(projects)
 
