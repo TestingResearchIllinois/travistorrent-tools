@@ -12,6 +12,7 @@ def download_and_store_job(job)
     log_url = "http://s3.amazonaws.com/archive.travis-ci.org/jobs/#{job.id}/log.txt"
     log = Net::HTTP.get_response(URI.parse(log_url)).body
   end
+  # TODO (MMB) provide configoption for shared path
   File.open("logs/#{job.id}.log", 'w') { |f| f.puts log }
   log = '' # necessary to enable GC of previously stored value, otherwise: memory leak
 end
@@ -39,13 +40,13 @@ begin
     rescue NoMethodError => e
       # TODO (MMB) log something clever
       # high-speed exit point
-      exit(1)
+      next
     end
 
     if project.nil?
       # TODO (MMB) log something clever
       # high-speed exit point
-      exit(1)
+      next
     end
 
     build = project.build(build_number)

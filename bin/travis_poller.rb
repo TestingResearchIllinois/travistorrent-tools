@@ -30,11 +30,13 @@ def setup_rabbit
 end
 
 def setup_mongo
+  # TODO (MMB) Factor out connection creation
   mongo_client = Mongo::Client.new(['127.0.0.1:27017'], :database => 'm_travistorrent')
   db = mongo_client.database
   Mongo::Logger.logger.level = ::Logger::FATAL
 
   @collection = mongo_client[:projects]
+  # TODO (MMB) Check if already indexed before accessing
   @collection.indexes.create_one({name: 1}, unique: true)
 end
 
@@ -42,6 +44,8 @@ def check_projects(projects)
   # TODO (MMB) This is an over simplification of the project meta model. We probably want to store failed
   # builds, downloaded builds, failed downloads etc.
   projects.each do |project|
+    # TODO (MMB) add getter for @collection and handle failures in there
+    # TODO (MMB) query by id, and pull through the rest of the script
     mongo_project = @collection.find({name: project}).first
     mongo_project ? local_highest_build = mongo_project[:latest_build] : local_highest_build = 1
 
@@ -55,6 +59,7 @@ def check_projects(projects)
 
     if remote_project.nil?
       # TODO (MMB) log something clever
+      # project deleted?
       # high-speed exit point
       next
     end
@@ -63,14 +68,15 @@ def check_projects(projects)
     puts " [#{project}] Remote highest build: #{remote_highest_build}; local #{local_highest_build}"
 
     # high-speed exit point
-    next if remote_highest_build == local_highest_build
+    next if remote_highest_build <= local_highest_build
+    # TODO (MMB) log something clever, as this is a very unexpected scenario
 
     enqueue_build_downloads(local_highest_build, remote_highest_build, project)
   end
 end
 
 def enqueue_build_downloads(from, to, project)
-  new_builds = (from..to).to_a
+  new_builds = (from..to)
   new_builds.each do |build|
     my_hash = {:project => project, :build => build}
     msg = JSON.generate(my_hash)
@@ -78,6 +84,7 @@ def enqueue_build_downloads(from, to, project)
     puts " [x] Sent #{msg}"
   end
 
+  # TODO (MMB) Convert to event stream and push into travis_downloader
   @collection.update_one({"name": project},
                          {"name": project, "latest_build" => to},
                          {"upsert": true})
