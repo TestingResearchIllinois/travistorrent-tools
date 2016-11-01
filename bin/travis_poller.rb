@@ -14,7 +14,7 @@ def read_projects
     elem.strip.gsub('@','/')
   end
   projects.select! do |elem|
-    elem != '' and !/^[\w-]+\/[\w-]+$/.match(elem).nil?
+    elem != '' and !/^[\w-]{1,100}\/[\w-]{1,100}$/.match(elem).nil?
   end
 
   exit(0) if projects.empty?
