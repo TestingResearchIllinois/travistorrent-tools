@@ -1,34 +1,44 @@
 #!/usr/bin/env ruby
 # encoding: utf-8
 
-require 'bunny'
 require 'travis'
 require 'json'
 
+load '../lib/rabbitmq_access.rb'
+
+
+@buildlog_path = './logs/'
+
+def buildlog_dir(repo)
+  parent_dir = File.join(@buildlog_path, repo.gsub(/\//, '@'))
+  FileUtils::mkdir_p(parent_dir)
+end
+
 def download_and_store_job(job)
+  build = job.build
+
+  logfile = File.join(buildlog_dir(build.repository.slug), "#{build.id}_#{build.commit.sha}_#{job.id.to_s}.log")
+  # do not re-download already downloaded buildlogs
+  return if File.exists?(logfile)
+
   begin
     log = job.log.body
   rescue
     log_url = "http://s3.amazonaws.com/archive.travis-ci.org/jobs/#{job.id}/log.txt"
     log = Net::HTTP.get_response(URI.parse(log_url)).body
   end
-  # TODO (MMB) provide configoption for shared path
-  File.open("logs/#{job.id}.log", 'w') { |f| f.puts log }
+
+  # TODO (MMB) check if logifle is non-empty
+  File.open(logfile, 'w') { |f| f.puts log }
   log = '' # necessary to enable GC of previously stored value, otherwise: memory leak
 end
 
-# TODO (MMB) Factor out clone from travis poller
-conn = Bunny.new
-conn.start
 
-ch = conn.create_channel
-q = ch.queue("download_build_queue", :durable => true)
-
-ch.prefetch(1)
+rabbit_channel.prefetch(1)
 puts " [*] Waiting for messages. To exit press CTRL+C"
 
 begin
-  q.subscribe(:manual_ack => true, :block => true) do |delivery_info, properties, body|
+  download_queue.subscribe(:manual_ack => true, :block => true) do |delivery_info, properties, body|
     puts " [x] Received '#{body}'"
     my_message = JSON.parse(body)
     project_name = my_message['project']
@@ -59,8 +69,8 @@ begin
     end
 
     puts " [x] Done"
-    ch.ack(delivery_info.delivery_tag)
+    rabbit_channel.ack(delivery_info.delivery_tag)
   end
 rescue Interrupt => _
-  conn.close
+  rabbit_con.close
 end

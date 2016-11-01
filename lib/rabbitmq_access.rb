@@ -1,18 +1,20 @@
 require 'bunny'
 
-def setup_rabbit
+# Abstracts access to RabbitMQ via lazy loading
+
+def rabbit_con
   @rabbit_con = Bunny.new
   @rabbit_con.start
+  @rabbit_con
 end
 
-def setup_download_queue
-  channel = @rabbit_con.create_channel
-  @download_queue = channel.queue("download_build_queue", :durable => true)
+def rabbit_channel
+  @channel = rabbit_con.create_channel if @channel.nil?
+  @channel
 end
 
 def download_queue
-  setup_rabbit if @rabbit_con.nil?
-  setup_download_queue if @download_queue.nil?
+  @download_queue = rabbit_channel.queue("download_build_queue", :durable => true) if @download_queue.nil?
   @download_queue
 end
 

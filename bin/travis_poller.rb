@@ -7,6 +7,7 @@ require 'travis'
 load '../lib/mongodb_access.rb'
 load '../lib/rabbitmq_access.rb'
 
+# Generates a stream of events and enqueues downloads based on projects that TravisTorrent analyzes
 
 # Reads in a list of projects and parses them for validity. Only returns projects with the format
 # [alphanumeric]/[alphanumeric] and converts the GitHub format [alphanumeric]@[alphanumeric] to it if necessary
