@@ -14,10 +14,12 @@ def buildlog_dir(repo)
   FileUtils::mkdir_p(parent_dir)
 end
 
+# Downloads and stores a job buildlog file from Travis CI
 def download_and_store_job(job, build_id, build_commit_sha, project_name)
   logfile = File.join(buildlog_dir(project_name), "#{build_id}_#{build_commit_sha}_#{job.id.to_s}.log")
+
   # do not re-download already downloaded buildlogs
-  return if File.exists?(logfile)
+  return true if File.exists?(logfile) and File.size(logfile) > 0
 
   begin
     log = job.log.body
@@ -26,9 +28,13 @@ def download_and_store_job(job, build_id, build_commit_sha, project_name)
     log = Net::HTTP.get_response(URI.parse(log_url)).body
   end
 
+  return false if log.strip.empty?
+
   # TODO (MMB) check if logfile is non-empty; only accept if non-empty
   File.open(logfile, 'w') { |f| f.puts log }
   log = '' # necessary to enable GC of previously stored value, otherwise: memory leak
+
+  return true
 end
 
 
@@ -65,8 +71,11 @@ begin
     # TODO (MMB) retrieve some basic API statistics from build
     build.jobs.each do |job|
       puts " [#{project_name}] Downloading #{build_number}/#{job.number}"
-      download_and_store_job(job, build_id, build_commit_sha, project_name)
-      # TODO (MMB) dispatch analysis of buildlogs
+      if download_and_store_job(job, build_id, build_commit_sha, project_name)
+        # TODO (MMB) dispatch analysis of buildlogs
+      else
+        # TODO (MMB) dome some clever error logging
+      end
     end
 
     puts " [x] Done"

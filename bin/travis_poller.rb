@@ -14,10 +14,10 @@ load '../lib/rabbitmq_access.rb'
 def read_projects
   projects_file = File.new('projects.txt', 'r')
   projects = projects_file.readlines.uniq.compact.map do |elem|
-    elem.strip.gsub('@','/')
+    elem.strip.gsub('@', '/')
   end
   projects.select! do |elem|
-    elem != '' and !/^[\w-]{1,100}\/[\w-]{1,100}$/.match(elem).nil?
+    !/^[\w-]{1,100}\/[\w-]{1,100}$/.match(elem).nil?
   end
 
   exit(0) if projects.empty?
@@ -70,8 +70,8 @@ def enqueue_build_downloads(from, to, project)
 
   # TODO (MMB) Convert to event stream and push into travis_downloader
   mongo_events.update_one({"name": project},
-                         {"name": project, "latest_build" => to},
-                         {"upsert": true})
+                          {"name": project, "latest_build" => to},
+                          {"upsert": true})
 end
 
 projects = read_projects
