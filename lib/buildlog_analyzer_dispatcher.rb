@@ -32,21 +32,32 @@ class BuildlogAnalyzerDispatcher
       begin
         next if logfile == '.' or logfile == '..'
         file = "#{@directory}/#{logfile}"
-
         if @recursive and File.directory?(file)
           b = BuildlogAnalyzerDispatcher.new file, true
           b.start
         end
 
-        next if File.extname(logfile) != '.log'
-
-        puts "Working on #{file}"
-
-        analyzer = LogFileAnalyzer.new file
-        analyzer.mixin_specific_language_analyzer
-        analyzer.init
-        analyzer.analyze
-        @results << analyzer.output
+        if File.extname(logfile) == '.log'
+          puts "Working on #{file}"
+          analyzer = LogFileAnalyzer.new file
+          analyzer.mixin_specific_language_analyzer
+          analyzer.init
+          analyzer.analyze
+          @results << analyzer.output
+        end
+        if File.extname(logfile) == '.gz'
+          puts "Working on #{file}"
+          a = Archive.new("proj/grocer@grocer.tar.gz")
+          a.each do |entry, data|
+            next if File.extname(entry.path) != ".log"
+            puts "\t>#{entry}"
+            analyzer = LogFileAnalyzer.new entry.path, data
+            analyzer.mixin_specific_language_analyzer
+            analyzer.init
+            analyzer.analyze
+            @results << analyzer.output
+          end
+        end
       rescue Exception => e
         puts "Error analyzing #{file}, rescued: #{e}"
       end

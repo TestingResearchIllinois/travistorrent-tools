@@ -1,4 +1,5 @@
 require 'colorize'
+require "archive" #for reading GZ files with native parser
 
 load 'lib/travis_fold.rb'
 
@@ -24,14 +25,19 @@ class LogFileAnalyzer
 
   @OUT_OF_FOLD
 
-  def initialize(file)
+  def initialize(file, data = nil)
     @OUT_OF_FOLD = 'out_of_fold'
     @folds = Hash.new
     @test_lines = Array.new
     @frameworks = Array.new
 
     get_build_info(file)
-    @logFile = File.read(file)
+    if data == nil
+      @logFile = File.read(file)
+    else
+      @logFile = data;
+    end
+
     encoding_options = {
         :invalid => :replace, # Replace invalid byte sequences
         :undef => :replace, # Replace anything not defined in ASCII
