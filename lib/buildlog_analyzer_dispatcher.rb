@@ -28,24 +28,43 @@ class BuildlogAnalyzerDispatcher
     puts "Starting to analyze buildlogs from #{@directory} ..."
 
     # dir foreach is much faster than Dir.glob, because the latter builds an array of matched files up-front
-    Dir.foreach(@directory) do |logfile|
-      begin
-        next if logfile == '.' or logfile == '..'
-        file = "#{@directory}/#{logfile}"
-        if @recursive and File.directory?(file)
-          b = BuildlogAnalyzerDispatcher.new file, true
-          b.start
-        end
+    if File.directory?(@directory)
+      Dir.foreach(@directory) do |logfile|
+        begin
+          next if logfile == '.' or logfile == '..'
+          file = "#{@directory}/#{logfile}"
+          if @recursive and File.directory?(file)
+            b = BuildlogAnalyzerDispatcher.new file, true
+            b.start
+          end
 
-        if File.extname(logfile) == '.log'
-          puts "Working on #{file}"
-          analyzer = LogFileAnalyzer.new file
-          analyzer.mixin_specific_language_analyzer
-          analyzer.init
-          analyzer.analyze
-          @results << analyzer.output
+          if File.extname(logfile) == '.log'
+            puts "Working on #{file}"
+            analyzer = LogFileAnalyzer.new file
+            analyzer.mixin_specific_language_analyzer
+            analyzer.init
+            analyzer.analyze
+            @results << analyzer.output
+          end
+          if File.extname(logfile) == '.gz'
+            puts "Working on #{file}"
+            a = Archive.new(file)
+            a.each do |entry, data|
+              next if File.extname(entry.path) != ".log"
+              puts "\t>#{entry}"
+              analyzer = LogFileAnalyzer.new entry.path, data
+              analyzer.mixin_specific_language_analyzer
+              analyzer.init
+              analyzer.analyze
+              @results << analyzer.output
+            end
+          end
+        rescue Exception => e
+          puts "Error analyzing #{file}, rescued: #{e}"
         end
-        if File.extname(logfile) == '.gz'
+      end
+     else if File.extname(@directory) == '.gz'
+         file = @directory;
           puts "Working on #{file}"
           a = Archive.new(file)
           a.each do |entry, data|
@@ -57,10 +76,8 @@ class BuildlogAnalyzerDispatcher
             analyzer.analyze
             @results << analyzer.output
           end
-        end
-      rescue Exception => e
-        puts "Error analyzing #{file}, rescued: #{e}"
-      end
+    end
+
     end
 
     if !@results.empty?
