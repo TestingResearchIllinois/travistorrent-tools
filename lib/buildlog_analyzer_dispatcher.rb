@@ -47,7 +47,7 @@ class BuildlogAnalyzerDispatcher
         end
         if File.extname(logfile) == '.gz'
           puts "Working on #{file}"
-          a = Archive.new("proj/grocer@grocer.tar.gz")
+          a = Archive.new(file)
           a.each do |entry, data|
             next if File.extname(entry.path) != ".log"
             puts "\t>#{entry}"
