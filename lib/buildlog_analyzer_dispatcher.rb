@@ -81,7 +81,11 @@ class BuildlogAnalyzerDispatcher
     end
 
     if !@results.empty?
-      result_file = "#{@directory}/#{result_file_name}"
+      if File.directory?(@directory)
+        result_file = "#{@directory}/#{result_file_name}"
+      else
+        result_file = "#{@directory}-#{result_file_name}"
+      end
       puts "  writing #{result_file}"
       csv = array_of_hashes_to_csv @results
       File.open(result_file, 'w') { |file|
