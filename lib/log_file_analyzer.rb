@@ -1,4 +1,3 @@
-require 'colorize'
 require "archive" #for reading GZ files with native parser
 
 load 'lib/travis_fold.rb'
@@ -124,8 +123,8 @@ class LogFileAnalyzer
   def split
     currentFold = @OUT_OF_FOLD
     @logFileLines.each do |line|
-      line = line.uncolorize
 
+      line = line.gsub(/\e\[([;\d]+)?m/, '')
       if !(line =~ /travis_fold:start:([\w\.]*)/).nil?
         currentFold = $1
         next
