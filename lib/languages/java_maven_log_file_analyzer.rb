@@ -86,9 +86,18 @@ module JavaMavenLogFileAnalyzer
   end
 
   def extractTestNameAndMethod(string)
-    return "" if (string.nil?) or not (string.include? "(")
-    testClass = string.split('(')
-    return testClass[1][0,testClass[1].length-2] << "." << (string.split(':')[0].split('.')[0].split('(')[0]).strip
+    return "" if (string.nil?)
+    if (string.include? "(")
+      testClass = string.split('(')
+      return string if testClass == nil
+      return testClass[1][0,testClass[1].index(')')] << "." << (string.split(':')[0].split('.')[0].split('(')[0]).strip
+    elsif (string.include? "#")
+      testClass = string.strip.split('#')
+      return string if testClass == nil
+      return testClass[0] << "." << (testClass[1][0,testClass[1].index(' ')])
+    else
+     return string
+    end
   end
 
   def analyze_tests
@@ -96,7 +105,7 @@ module JavaMavenLogFileAnalyzer
     has_tests_run_per_testClass = false
 
     @test_lines.each do |line|
-      if failed_tests_started
+      if failed_tests_started and !has_tests_run_per_testClass
         @tests_failed_lines << line
         if line.strip.empty?
           failed_tests_started = false
@@ -104,8 +113,9 @@ module JavaMavenLogFileAnalyzer
       end
       if !(line =~ /Tests run: (\d*), Failures: (\d*), Errors: (\d*)(, Skipped: (\d*))?, Time elapsed: (.* sec) (<<< FAILURE! )?- in /).nil?
         has_tests_run_per_testClass = true
-      elsif has_tests_run_per_testClass and !(line =~ /([a-zA-Z0-9\.]+)\(([^\)]+)\)\s+Time elapsed/).nil?
-        @tests_failed <<  ($2<<"."<<$1)
+        puts "Has per test!"
+      elsif has_tests_run_per_testClass and !(line =~ /([^\(]+)\(([^\)]+)\)\s+Time elapsed/).nil?
+        @tests_failed << ($2<<"."<<$1)
       elsif !has_tests_run_per_testClass and !(line =~ /Tests run: .*? Time elapsed: (.* sec)/).nil?
         init_tests
         @tests_run = true
