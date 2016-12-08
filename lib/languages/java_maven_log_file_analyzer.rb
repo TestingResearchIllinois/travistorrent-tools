@@ -113,7 +113,6 @@ module JavaMavenLogFileAnalyzer
       end
       if !(line =~ /Tests run: (\d*), Failures: (\d*), Errors: (\d*)(, Skipped: (\d*))?, Time elapsed: (.* sec) (<<< FAILURE! )?- in /).nil?
         has_tests_run_per_testClass = true
-        puts "Has per test!"
       elsif has_tests_run_per_testClass and !(line =~ /([^\(]+)\(([^\)]+)\)\s+Time elapsed/).nil?
         @tests_failed << ($2<<"."<<$1)
       elsif !has_tests_run_per_testClass and !(line =~ /Tests run: .*? Time elapsed: (.* sec)/).nil?
