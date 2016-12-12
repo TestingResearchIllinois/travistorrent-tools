@@ -106,12 +106,12 @@ module JavaMavenLogFileAnalyzer
 
     @test_lines.each do |line|
       if failed_tests_started and !has_tests_run_per_testClass
-        @tests_failed_lines << line
+        @tests_failed_lines << line if line.strip.length > 0
         if line.strip.empty?
           failed_tests_started = false
         end
       end
-      if !(line =~ /Tests run: (\d*), Failures: (\d*), Errors: (\d*)(, Skipped: (\d*))?, Time elapsed: (.* sec) (<<< FAILURE! )?- in /).nil?
+      if !(line =~ /Tests run: (\d*), Failures: (\d*), Errors: (\d*)(, Skipped: (\d*))?, Time elapsed: (.* sec)(\s<<< FAILURE! )?/).nil?
         has_tests_run_per_testClass = true
       elsif has_tests_run_per_testClass and !(line =~ /([^\(]+)\(([^\)]+)\)\s+Time elapsed/).nil?
         @tests_failed << ($2<<"."<<$1)
@@ -141,7 +141,12 @@ module JavaMavenLogFileAnalyzer
         @num_tests_failed += $2.to_i
         @num_tests_skipped += $3.to_i
       elsif !(line =~ /(Failed tests:)|(Tests in error:)/).nil?
+        remaining = line.gsub(/(Failed tests:)|(Tests in error:)/,'').strip
+        @tests_failed_lines << remaining if remaining.length>0
         failed_tests_started = true
+        if(@tests_failed.length == 0)
+          has_tests_run_per_testClass = false
+        end
       end
     end
     uninit_ok_tests
