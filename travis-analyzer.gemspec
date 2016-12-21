@@ -27,5 +27,6 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'activesupport', ['<5.0.0']
   gem.add_dependency 'time_difference'
   gem.add_dependency 'json', ['>= 2.0.0']
+  gem.add_dependency 'archive'
 
 end
