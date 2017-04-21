@@ -10,7 +10,7 @@ require 'fileutils'
 
 load 'lib/csv_helper.rb'
 
-@date_threshold = Date.parse("2016-09-01")
+@date_threshold = Date.parse("2017-04-01")
 
 def job_logs(build, sha, error_file, parent_dir)
   jobs = build['job_ids']
